@@ -1,14 +1,71 @@
+// index.tsx
 import Head from 'next/head';
 import Image from 'next/image';
+import { useEffect, useState } from 'react';
 
 import twitterLogo from '@/public/twitter-logo.svg';
 import styles from '@/styles/Home.module.css';
+import CandyMachine from '@/components/CandyMachine';
 
 // Constants
-const TWITTER_HANDLE = '_buildspace';
+const TWITTER_HANDLE = 'あなたのTwitterハンドル';
 const TWITTER_LINK = `https://twitter.com/${TWITTER_HANDLE}`;
 
 const Home = () => {
+  // State
+  const [walletAddress, setWalletAddress] = useState(null);
+
+  // Actions
+  const checkIfWalletIsConnected = async () => {
+    try {
+      const { solana } = window;
+
+      if (solana && solana.isPhantom) {
+        console.log('Phantom wallet found!');
+
+        const response = await solana.connect({ onlyIfTrusted: true });
+        console.log(
+          'Connected with Public Key:',
+          response.publicKey.toString()
+        );
+
+        /*
+         * ユーザーの公開鍵を後から使える状態にします。
+         */
+        setWalletAddress(response.publicKey.toString());
+      } else {
+        alert('Solana object not found! Get a Phantom Wallet 👻');
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const connectWallet = async () => {
+    const { solana } = window;
+
+    if (solana) {
+      const response = await solana.connect();
+      console.log('Connected with Public Key:', response.publicKey.toString());
+      setWalletAddress(response.publicKey.toString());
+    }
+  };
+
+  const renderNotConnectedContainer = () => (
+    <button
+      className={`${styles.ctaButton} ${styles.connectWalletButton}`}
+      onClick={connectWallet}
+    >
+      Connect to Wallet
+    </button>
+  );
+
+  useEffect(() => {
+    const onLoad = async () => {
+      await checkIfWalletIsConnected();
+    };
+    onLoad();
+  }, []);
 
   return (
     <>
@@ -23,7 +80,10 @@ const Home = () => {
           <div>
             <p className={styles.header}>🍭 Candy Drop</p>
             <p className={styles.subText}>NFT drop machine with fair mint</p>
+            {!walletAddress && renderNotConnectedContainer()}
           </div>
+          {/* ウォレットアドレスがステートに保存されていたら、CandyMachineコンポーネントに渡す */}
+          {walletAddress && <CandyMachine walletAddress={window.solana} />}
           <div className={styles.footerContainer}>
             <Image
               alt="Twitter Logo"
